@@ -110,14 +110,9 @@ char *destination_dir_path;
 // Deleting files of a particular extension
 char *file_extension;
 
-
-
 /*
 ======Functions======
 */
-
-
-
 // 1. Listing files (no subdirectories)
 int dirlist(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
     if (typeflag == FTW_D) {
@@ -252,17 +247,9 @@ int remd(const char *file_path, const struct stat *sb, int typeflag, struct FTW 
     return 0;
 }
 
-
-
-
-
 /*
 ======Main Function======
 */
-
-
-
-
 int main(int num_args, char *arguments[]) {
 
     if (num_args < 2) {
