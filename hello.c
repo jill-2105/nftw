@@ -7,7 +7,9 @@
 #include <ftw.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <libgen.h>
+#include <limits.h>
 
 // Creating a global dirpath and defaulting it to .
 char *dir_path = ".";
@@ -102,17 +104,80 @@ char *listextn_type;
 int listextn_type_count =0;
 
 
-// Copying directory and moving directory
+// Copying and moving files
+char *src_path;
+char *dest_path;
+
+// function to create a directory
+int create_dir(const char *dest_path){
+    int dir_res = mkdir(dest_path, 0777);
+    if(dir_res == -1) {
+        printf("Error creating directory");
+        return -1;
+    }
+    return 0;
+}
+// function to copy a file
+int copy_file(const char *src_path, const char *dest_path){
+    // Opening source file
+    int src_fd = open(src_path, O_RDONLY);
+    if (src_fd == -1) {
+        printf("Error opening source file");
+        return -1;
+    }
+
+    // Opening destination file
+    int dest_fd = open(dest_path, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+    if (dest_fd == -1) {
+        printf("Error opening destination file");
+        return -1;
+    }
+
+    // Character buffer to store file content
+    char buffer[2048];
+    ssize_t bytes_at_src;
+    ssize_t bytes_at_dest;
+    while ((bytes_at_src = read(src_fd, buffer, sizeof(buffer))) > 0) {
+        bytes_at_dest = write(dest_fd, buffer, bytes_at_src);
+        if(bytes_at_dest != bytes_at_src) {
+            printf("Error writing to destination file");
+            return -1;
+        }
+    } if(bytes_at_src == -1) {
+        printf("Error reading from source file");
+        return -1;
+    }
+
+    close(src_fd);
+    close(dest_fd);
+    return 0;
+}
+
 char *source_dir_path;
 char *destination_dir_path;
-
 
 // Deleting files of a particular extension
 char *file_extension;
 
+int del_dir(const char *file_path){
+    int del_dir_result = rmdir(file_path);
+        if(del_dir_result == -1) {
+            printf("Error deleting directory");
+            return -1;
+        }
+}
+int del_file(const char *file_path){
+    int del_file_result = unlink(file_path);
+        if (del_file_result == -1) {
+            printf("Error deleting file");
+            return -1;
+        }
+}
+
 /*
 ======Functions======
 */
+
 // 1. Listing files (no subdirectories)
 int dirlist(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
     if (typeflag == FTW_D) {
@@ -121,6 +186,11 @@ int dirlist(const char *file_path, const struct stat *sb, int typeflag, struct F
         }
     }
     if (typeflag == FTW_F) {
+        // Check array bounds to prevent overflow
+        if (file_count >= 25) {
+            printf("Warning: Maximum file limit (25) reached, skipping additional files\n");
+            return 0;
+        }
         files[file_count].file_path = strdup(file_path);
         files[file_count].creation_time = sb->st_ctime;
         file_count++;
@@ -227,22 +297,65 @@ int listextn(const char *file_path, const struct stat *sb, int typeflag, struct 
 
 // 11. Copying directory
 int copyd(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+    // Logic of copy
+    // Construct relative path
+    const char *relative_path = file_path + strlen(src_path);
+    // Skipping the final slash
+    if (*relative_path == '/') relative_path++; 
     
+    // Construct full destination path
+    char full_dest[PATH_MAX];
+    int result = snprintf(full_dest, sizeof(full_dest), "%s/%s", dest_path, relative_path);
+    
+    // Check if the path was truncated (buffer overflow protection)
+    if (result >= PATH_MAX) {
+        printf("Error: Destination path too long\n");
+        return -1;
+    }
+    
+    if(typeflag == FTW_D) {
+        int dir_result = create_dir(full_dest);
+        return (dir_result == 0) ? 0 : -1;
+    } if(typeflag == FTW_F) {
+        int file_result = copy_file(file_path, full_dest);
+        return (file_result == 0) ? 0 : -1;
+    }
+    return 0;
 }
 
 // 12. Moving directory
 int dmove(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
-
+    const char *relative_path = file_path + strlen(src_path);
+    // Skipping the final slash
+    if (*relative_path == '/') relative_path++; 
+    
+    // Construct full destination path
+    char full_dest[PATH_MAX];
+    int result = snprintf(full_dest, sizeof(full_dest), "%s/%s", dest_path, relative_path);
+    
+    // Check if the path was truncated (buffer overflow protection)
+    if (result >= PATH_MAX) {
+        printf("Error: Destination path too long\n");
+        return -1;
+    }
+    // Logic of copy
+    if(typeflag == FTW_D) {
+        create_dir(full_dest);
+        del_dir(file_path);        
+    }
+    if(typeflag == FTW_F) {
+        copy_file(file_path, full_dest);
+        del_file(file_path);
+    }
 }
 
 // 13. Deleting files of a particular extension
 int remd(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
-    if (typeflag == FTW_F) {
-        char *ext = strrchr(file_path, '.');
-        if (strcmp(file_extension, ext) == 0) {
-            // Delete the file
-            printf("File Deleted\n");
-        }
+    if(typeflag == FTW_D) {
+        del_dir(file_path);
+    }
+    if(typeflag == FTW_F) {
+        del_file(file_path);
     }
     return 0;
 }
@@ -294,7 +407,6 @@ int main(int num_args, char *arguments[]) {
                 }
                 global_file_type = arguments[2];
                 dir_path = arguments[3];
-                char *file_type_target = arguments[2];
                 nftw(dir_path, countype, 20, FTW_PHYS | FTW_ACTIONRETVAL);
                 print_file_type_count();
                 break;
@@ -375,9 +487,9 @@ int main(int num_args, char *arguments[]) {
                     printf("Too much arguments\n");
                     return 1;
                 }
-                source_dir_path = arguments[2];
-                destination_dir_path = arguments[3];
-                nftw(source_dir_path, copyd, 20, FTW_PHYS);
+                src_path = arguments[2];
+                dest_path = arguments[3];
+                nftw(src_path, copyd, 20, FTW_PHYS);
                 break;
 
             case 12:
@@ -406,6 +518,5 @@ int main(int num_args, char *arguments[]) {
             return 0;
         }
     }
-    printf("Invalid command: %s\n", arguments[1]);
     return 1;
 }
