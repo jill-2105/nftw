@@ -1,3 +1,4 @@
+// to enable posix
 #define _XOPEN_SOURCE 500
 
 #include <stdio.h>
@@ -35,7 +36,6 @@ void print_files() {
     printf("Files in reverse order\n");
     for (int i = 0; i < file_count; i++) {
         char *time_str = ctime(&files[i].creation_time);
-        // time_str[strlen(time_str) - 1] = '\0';  // Remove newline
         printf("%s: %s", files[i].file_path, time_str);
     }
 }
@@ -101,13 +101,12 @@ void print_total_size() {
 
 // Listing files of a particular extension
 char *listextn_type;
-int listextn_type_count =0;
+int listextn_files = 0;
 
 
 // Copying and moving files
 char *src_path;
 char *dest_path;
-
 // function to create a directory
 int create_dir(const char *dest_path){
     int dir_res = mkdir(dest_path, 0777);
@@ -153,12 +152,14 @@ int copy_file(const char *src_path, const char *dest_path){
     return 0;
 }
 
+// Moving directory
 char *source_dir_path;
 char *destination_dir_path;
 
 // Deleting files of a particular extension
 char *file_extension;
 
+// Deleting directory
 int del_dir(const char *file_path){
     int del_dir_result = rmdir(file_path);
         if(del_dir_result == -1) {
@@ -166,11 +167,15 @@ int del_dir(const char *file_path){
             return -1;
         }
 }
+// Deleting file
 int del_file(const char *file_path){
     int del_file_result = unlink(file_path);
         if (del_file_result == -1) {
             printf("Error deleting file");
             return -1;
+        } else {
+            printf("File deleted successfully");
+            return 0;
         }
 }
 
@@ -295,10 +300,12 @@ int listextn(const char *file_path, const struct stat *sb, int typeflag, struct 
     if (typeflag == FTW_F) {
         char *ext = strrchr(file_path, '.');
         if (strcmp(listextn_type, ext) == 0) {
-            listextn_type_count++;
+            listextn_files++;
+            char *allfiles = basename((char *)file_path);
+            printf("File: %s Path: %s\n", allfiles, file_path);
+        } else if(listextn_files == 0) {
+            printf("No file found\n");
         }
-        char *allfiles = basename((char *)file_path);
-        printf("File: %s Path: %s\n", allfiles, file_path);
     }
     return 0;
 }
@@ -385,16 +392,17 @@ int main(int num_args, char *arguments[]) {
 
     // Array of valid commands
     const char *commands[] = {
-        "-dirlist", "-countfd", "-countype", "-filesrch", "-dirlst", "-fcountrt", "-dircnt", "-sumfilesize", "-rootlist", "-Listextn", "-copyd", "-dmove", "-remd"};
+        "-dirlist", "-countfd", "-countype", "-filesrch", "-dirlst", "-fcountrt", "-dircnt", "-sumfilesize", "-rootlist", "-Listextn", "-copyd", "-dmove", "-remd"
+    };
 
     for (int i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
 
         if (strcmp(arguments[1], commands[i]) == 0) {
 
             switch (i + 1) {
-            case 1:
+            case 1: // 1. Listing files (no subdirectories)
                 if (num_args != 3) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 dir_path = arguments[2];
@@ -403,9 +411,9 @@ int main(int num_args, char *arguments[]) {
                 print_files();
                 break;
 
-            case 2:
+            case 2: // 2. Counting files (no subdirectories)
                 if (num_args != 3) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 dir_path = arguments[2];
@@ -413,9 +421,9 @@ int main(int num_args, char *arguments[]) {
                 print_file_count_in_dir();
                 break;
 
-            case 3:
+            case 3: // 3. Counting files of particular type (no subdirectories)
                 if (num_args != 4) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 global_file_type = arguments[2];
@@ -424,9 +432,9 @@ int main(int num_args, char *arguments[]) {
                 print_file_type_count();
                 break;
 
-            case 4:
+            case 4: // 4. Searching file of particular file type
                 if (num_args != 4) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 global_file_name = arguments[2];
@@ -435,9 +443,9 @@ int main(int num_args, char *arguments[]) {
                 print_file_name();
                 break;
 
-            case 5:
+            case 5: // 5. Listing sub-directories
                 if (num_args != 4) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 global_sub_dir = arguments[2];
@@ -446,9 +454,9 @@ int main(int num_args, char *arguments[]) {
                 print_sub_dir_name();
                 break;
 
-            case 6:
+            case 6: // 6. Counting all files
                 if (num_args != 3) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 dir_path = arguments[2];
@@ -456,9 +464,9 @@ int main(int num_args, char *arguments[]) {
                 print_file_count();
                 break;
 
-            case 7:
+            case 7: // 7. Count all directories
                 if (num_args != 3) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 dir_path = arguments[2];
@@ -466,9 +474,9 @@ int main(int num_args, char *arguments[]) {
                 print_dir_count();
                 break;  
 
-            case 8:
+            case 8: // 8. Sum of all file sizes
                 if (num_args != 3) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 dir_path = arguments[2];
@@ -476,28 +484,28 @@ int main(int num_args, char *arguments[]) {
                 print_total_size();
                 break;
 
-            case 9:
+            case 9: // 9. Listing all files and directories
                 if (num_args != 3) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 dir_path = arguments[2];
                 nftw(dir_path, rootlist, 20, FTW_PHYS);
                 break;  
 
-            case 10:
+            case 10: // 10. Listing files of a particular extension
                 if (num_args != 4) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
-                dir_path = arguments[2];
-                listextn_type = arguments[3];
+                listextn_type = arguments[2];
+                dir_path = arguments[3];
                 nftw(dir_path, listextn, 20, FTW_PHYS);
                 break;
 
-            case 11:
+            case 11: // 11. Copying directory
                 if (num_args != 4) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 src_path = arguments[2];
@@ -505,9 +513,9 @@ int main(int num_args, char *arguments[]) {
                 nftw(src_path, copyd, 20, FTW_PHYS);
                 break;
 
-            case 12:
+            case 12: // 12. Moving directory
                 if (num_args != 4) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 source_dir_path = arguments[2];
@@ -515,9 +523,9 @@ int main(int num_args, char *arguments[]) {
                 nftw(source_dir_path, dmove, 20, FTW_PHYS);
                 break;
 
-            case 13:
+            case 13: // 13. Deleting files of a particular extension
                 if (num_args != 4) {
-                    printf("Too much arguments\n");
+                    printf("Few/many arguments received\n");
                     return 1;
                 }
                 source_dir_path = arguments[2];
