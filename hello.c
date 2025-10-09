@@ -233,6 +233,10 @@ int filesrch(const char *file_path, const struct stat *sb, int typeflag, struct 
         char *file = basename((char *)file_path);
         if (strcmp(file, global_file_name) == 0) {
             filename[file_name_count++] = strdup(file_path);
+            if (file_name_count>=25) {
+                printf("Max limit reached");
+                return -1;
+            }
         }
     }
     return 0;
@@ -244,6 +248,10 @@ int dirlst(const char *file_path, const struct stat *sb, int typeflag, struct FT
         char *sub_dir = basename((char *)file_path);
         if (strcmp(sub_dir, global_sub_dir) == 0) {
             subdir[sub_dir_count++] = strdup(file_path);
+            if (sub_dir_count>=25) {
+                printf("Max limit reached");
+                return -1;
+            }
         }
     }
     return 0;
@@ -316,7 +324,7 @@ int copyd(const char *file_path, const struct stat *sb, int typeflag, struct FTW
     if(typeflag == FTW_D) {
         int dir_result = create_dir(full_dest);
         return (dir_result == 0) ? 0 : -1;
-    } if(typeflag == FTW_F) {
+    } else if(typeflag == FTW_F) {
         int file_result = copy_file(file_path, full_dest);
         return (file_result == 0) ? 0 : -1;
     }
@@ -325,37 +333,42 @@ int copyd(const char *file_path, const struct stat *sb, int typeflag, struct FTW
 
 // 12. Moving directory
 int dmove(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
-    const char *relative_path = file_path + strlen(src_path);
+    const char *relative_path = file_path + strlen(source_dir_path);
     // Skipping the final slash
     if (*relative_path == '/') relative_path++; 
     
     // Construct full destination path
     char full_dest[PATH_MAX];
-    int result = snprintf(full_dest, sizeof(full_dest), "%s/%s", dest_path, relative_path);
+    int result = snprintf(full_dest, sizeof(full_dest), "%s/%s", destination_dir_path, relative_path);
     
     // Check if the path was truncated (buffer overflow protection)
     if (result >= PATH_MAX) {
         printf("Error: Destination path too long\n");
         return -1;
     }
-    // Logic of copy
+    
+    // Logic of move
     if(typeflag == FTW_D) {
-        create_dir(full_dest);
-        del_dir(file_path);        
+        if (create_dir(full_dest) == 0) {
+            return del_dir(file_path);
+        }
+        return -1;
+    } else if(typeflag == FTW_F) {
+        if (copy_file(file_path, full_dest) == 0) {
+            return del_file(file_path);
+        }
+        return -1;
     }
-    if(typeflag == FTW_F) {
-        copy_file(file_path, full_dest);
-        del_file(file_path);
-    }
+    return 0;
 }
 
 // 13. Deleting files of a particular extension
 int remd(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
-    if(typeflag == FTW_D) {
-        del_dir(file_path);
-    }
     if(typeflag == FTW_F) {
-        del_file(file_path);
+        char *extension = strrchr(file_path, '.');
+        if (strcmp(file_extension, extension) == 0) {
+            del_file(file_path);
+        }
     }
     return 0;
 }
