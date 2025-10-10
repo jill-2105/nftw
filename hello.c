@@ -1,5 +1,7 @@
 // to enable posix
 #define _XOPEN_SOURCE 500
+// to enable macro like FTW_ACTIONRETVAL
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <string.h>
@@ -159,10 +161,22 @@ char *destination_dir_path;
 // 13. Deleting files of a particular extension
 char *file_extension;
 
+// Deleting file
+int del_file(const char *file_path){
+    int del_file_result = unlink(file_path);
+        if (del_file_result == -1) {
+            printf("Error deleting file");
+            return -1;
+        } else {
+            printf("File deleted successfully");
+            return 0;
+        }
+}
 // Deleting functionality (copy move and delete directory)
 static int delete(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
     if (typeflag == FTW_F) {
-        return del_file(file_path);
+        del_file(file_path);
+        return 0;
     } else if (typeflag == FTW_DP) {
         int del_dir_result = rmdir(file_path);
         if (del_dir_result == -1) {
@@ -181,17 +195,7 @@ int del_dir(const char *file_path){
         printf("Error deleting directory");
         return -1;
     }
-}
-// Deleting file
-int del_file(const char *file_path){
-    int del_file_result = unlink(file_path);
-        if (del_file_result == -1) {
-            printf("Error deleting file");
-            return -1;
-        } else {
-            printf("File deleted successfully");
-            return 0;
-        }
+    return 0;
 }
 
 /*
@@ -387,11 +391,13 @@ int dmove(const char *file_path, const struct stat *sb, int typeflag, struct FTW
     // Logic of move
     if(typeflag == FTW_F) {
         if (copy_file(file_path, full_dest) == 0) {
-            return del_file(file_path);
+            del_file(file_path);
+            return 0;
         }
         return -1;
     } else if(typeflag == FTW_D) {
-        return create_dir(full_dest);
+        create_dir(full_dest);
+        return 0;
     }
     return 0;
 }
