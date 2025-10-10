@@ -38,6 +38,7 @@ void print_files() {
     printf("Files in reverse order\n");
     for (int i = 0; i < file_count; i++) {
         char *time_str = ctime(&files[i].creation_time);
+        time_str[strcspn(time_str, "\n")] = 0; // Remove newline character
         printf("%s: %s", files[i].file_path, time_str);
     }
 }
@@ -318,12 +319,12 @@ int rootlist(const char *file_path, const struct stat *sb, int typeflag, struct 
 int listextn(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
     if (typeflag == FTW_F) {
         char *ext = strrchr(file_path, '.');
-        if (strcmp(listextn_type, ext) == 0) {
-            listextn_files++;
-            char *allfiles = basename((char *)file_path);
-            printf("File: %s Path: %s\n", allfiles, file_path);
-        } else if(listextn_files == 0) {
-            printf("No file found\n");
+        if (ext != NULL) {
+            if(strcmp(listextn_type, ext) == 0) {
+                listextn_files++;
+                char *allfiles = basename((char *)file_path);
+                printf("File: %s Path: %s\n", allfiles, file_path);
+            } 
         }
     }
     return 0;
@@ -531,9 +532,13 @@ int main(int num_args, char *arguments[]) {
                     printf("Few/many arguments received\n");
                     return 1;
                 }
-                listextn_type = arguments[2];
-                dir_path = arguments[3];
+                dir_path = arguments[2];
+                listextn_type = arguments[3];
+                listextn_files = 0;
                 nftw(dir_path, listextn, 20, FTW_PHYS);
+                if (listextn_files == 0) {
+                    printf("No file found\n");
+                }
                 break;
 
             case 11: // 11. Copying directory
@@ -544,6 +549,7 @@ int main(int num_args, char *arguments[]) {
                 src_path = arguments[2];
                 dest_path = arguments[3];
                 nftw(src_path, copyd, 20, FTW_PHYS);
+                printf("Copy completed\n");
                 break;
 
             case 12: // 12. Moving directory
@@ -555,6 +561,7 @@ int main(int num_args, char *arguments[]) {
                 destination_dir_path = arguments[3];
                 nftw(source_dir_path, dmove, 20, FTW_PHYS);
                 del_dir(source_dir_path); // Deleting the source directory after moving
+                printf("Move completed\n");
                 break;
 
             case 13: // 13. Deleting files of a particular extension
@@ -565,6 +572,7 @@ int main(int num_args, char *arguments[]) {
                 source_dir_path = arguments[2];
                 file_extension = arguments[3];
                 nftw(source_dir_path, remd, 20, FTW_PHYS);
+                printf("Delete completed\n");
                 break;
 
             default:
