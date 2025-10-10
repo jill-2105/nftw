@@ -12,10 +12,10 @@
 #include <libgen.h>
 #include <limits.h>
 
-// Creating a global dirpath and defaulting it to .
+// Creating a global dirpath and defaulting it to .(pwd)
 char *dir_path = ".";
 
-// File counting 
+// File counting (to list files and sorting them by creation time)
 int file_count = 0;
 typedef struct {
     char *file_path;
@@ -23,7 +23,7 @@ typedef struct {
 } File;
 File files[25];
 
-// File sorting and printing
+// 1. Listing files (no subdirectories)
 int compare(const void *a, const void *b) {
     time_t t1 = ((File *)a)->creation_time;
     time_t t2 = ((File *)b)->creation_time;
@@ -40,20 +40,20 @@ void print_files() {
     }
 }
 
-// Counting files in directory
+// 2. Counting files (no subdirectories)
 int fd_count = 0;
 void print_file_count_in_dir() {
     printf("Total number of files in directory is: %d\n", fd_count);
 }
 
-// Counting files of particular type
+// 3. Counting files of particular type (no subdirectories)
 char *global_file_type;
 int global_file_type_count = 0;
 void print_file_type_count() {
     printf("Total number of file types is: %d\n", global_file_type_count);
 }
 
-// Searching file of particular file type
+// 4. Searching file of particular file type
 char *global_file_name;
 int file_name_count = 0;
 char *filename[25];
@@ -67,7 +67,7 @@ void print_file_name() {
     }
 }
 
-// Listing sub-directories
+// 5. Listing sub-directories
 char *global_sub_dir;
 int sub_dir_count = 0;
 char *subdir[25];
@@ -81,33 +81,33 @@ void print_sub_dir_name() {
     }
 }
 
-// Counting all files
+// 6. Counting all files
 int fdCount = 0;
 void print_file_count() {
     printf("Total number of files is: %d\n", fdCount);
 }
 
-// Counting all directories
+// 7. Count all directories
 int count_all_dir = 0;
 void print_dir_count() {
     printf("Total number of directories is: %d\n", count_all_dir);
 }
 
-// Sum of all file sizes
+// 8. Sum of all file sizes
 int total_size = 0;
 void print_total_size() {
     printf("Total size of files is: %d bytes\n", total_size);
 }
 
-// Listing files of a particular extension
+// 9. Listing all files and directories
+// 10. Listing files of a particular extension
 char *listextn_type;
 int listextn_files = 0;
 
-
-// Copying and moving files
+// 11. Copying directory
 char *src_path;
 char *dest_path;
-// function to create a directory
+// Create a directory
 int create_dir(const char *dest_path){
     int dir_res = mkdir(dest_path, 0777);
     if(dir_res == -1) {
@@ -116,7 +116,7 @@ int create_dir(const char *dest_path){
     }
     return 0;
 }
-// function to copy a file
+// Copy a file
 int copy_file(const char *src_path, const char *dest_path){
     // Opening source file
     int src_fd = open(src_path, O_RDONLY);
@@ -152,14 +152,14 @@ int copy_file(const char *src_path, const char *dest_path){
     return 0;
 }
 
-// Moving directory
+// 12. Moving directory
 char *source_dir_path;
 char *destination_dir_path;
 
-// Deleting files of a particular extension
+// 13. Deleting files of a particular extension
 char *file_extension;
 
-// Deleting functionality
+// Deleting functionality (copy move and delete directory)
 static int delete(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
     if (typeflag == FTW_F) {
         return del_file(file_path);
