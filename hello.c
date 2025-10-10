@@ -111,7 +111,7 @@ char *dest_path;
 int create_dir(const char *dest_path){
     int dir_res = mkdir(dest_path, 0777);
     if(dir_res == -1) {
-        printf("Error creating directory");
+        printf("Error creating directory\n");
         return -1;
     }
     return 0;
@@ -159,13 +159,28 @@ char *destination_dir_path;
 // Deleting files of a particular extension
 char *file_extension;
 
-// Deleting directory
-int del_dir(const char *file_path){
-    int del_dir_result = rmdir(file_path);
-        if(del_dir_result == -1) {
-            printf("Error deleting directory");
+// Deleting functionality
+static int delete(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+    if (typeflag == FTW_F) {
+        return del_file(file_path);
+    } else if (typeflag == FTW_DP) {
+        int del_dir_result = rmdir(file_path);
+        if (del_dir_result == -1) {
+            printf("Error deleting directory\n");
             return -1;
         }
+        return 0;
+    }
+    return 0;
+}
+// Deleting directory
+int del_dir(const char *file_path){
+    // calling another nftw call here to make sure all files and subdirectories are deleted first
+    int result = nftw(file_path, delete, 20, FTW_DEPTH | FTW_PHYS);
+    if (result == -1) {
+        printf("Error deleting directory");
+        return -1;
+    }
 }
 // Deleting file
 int del_file(const char *file_path){
@@ -312,7 +327,11 @@ int listextn(const char *file_path, const struct stat *sb, int typeflag, struct 
 
 // 11. Copying directory
 int copyd(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
-    // Logic of copy
+    // Skip the source directory
+    if (ftwbuf->level == 0) {
+        return 0;
+    }
+    
     // Construct relative path
     const char *relative_path = file_path + strlen(src_path);
     // Skipping the final slash
@@ -330,16 +349,27 @@ int copyd(const char *file_path, const struct stat *sb, int typeflag, struct FTW
     
     if(typeflag == FTW_D) {
         int dir_result = create_dir(full_dest);
-        return (dir_result == 0) ? 0 : -1;
+        if (dir_result != 0) {
+            printf("Error creating directory\n");
+        } 
+        return -1;
     } else if(typeflag == FTW_F) {
         int file_result = copy_file(file_path, full_dest);
-        return (file_result == 0) ? 0 : -1;
+        if (file_result != 0) {
+            printf("Error copying file\n");
+        }
+        return -1;
     }
     return 0;
 }
 
 // 12. Moving directory
 int dmove(const char *file_path, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
+    // Skip the source directory itself (level 0)
+    if (ftwbuf->level == 0) {
+        return 0;
+    }
+    
     const char *relative_path = file_path + strlen(source_dir_path);
     // Skipping the final slash
     if (*relative_path == '/') relative_path++; 
@@ -355,16 +385,13 @@ int dmove(const char *file_path, const struct stat *sb, int typeflag, struct FTW
     }
     
     // Logic of move
-    if(typeflag == FTW_D) {
-        if (create_dir(full_dest) == 0) {
-            return del_dir(file_path);
-        }
-        return -1;
-    } else if(typeflag == FTW_F) {
+    if(typeflag == FTW_F) {
         if (copy_file(file_path, full_dest) == 0) {
             return del_file(file_path);
         }
         return -1;
+    } else if(typeflag == FTW_D) {
+        return create_dir(full_dest);
     }
     return 0;
 }
@@ -521,6 +548,7 @@ int main(int num_args, char *arguments[]) {
                 source_dir_path = arguments[2];
                 destination_dir_path = arguments[3];
                 nftw(source_dir_path, dmove, 20, FTW_PHYS);
+                del_dir(source_dir_path); // Deleting the source directory after moving
                 break;
 
             case 13: // 13. Deleting files of a particular extension
