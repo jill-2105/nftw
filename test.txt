@@ -1,0 +1,16 @@
+a125f -dirlist /home/patel7hb/assignments/assignment1/test
+a125f -countfd /home/patel7hb/assignments/assignment1/test
+a125f -countype .txt /home/patel7hb/assignments/assignment1/test
+a125f -countype .pdf /home/patel7hb/assignments/assignment1/test
+a125f -filesrch 1.txt /home/patel7hb/assignments/assignment1/test
+a125f -dirlst 2 /home/patel7hb/assignments/assignment1/test
+a125f -fcountrt /home/patel7hb/assignments/assignment1/test
+a125f -dircnt /home/patel7hb/assignments/assignment1/test
+a125f -sumfilesize /home/patel7hb/assignments/assignment1/test
+a125f -rootlist /home/patel7hb/assignments/assignment1/test
+a125f -Listextn /home/patel7hb/assignments/assignment1/test .txt
+a125f -Listextn /home/patel7hb/assignments/assignment1/test .docx
+a125f -copyd /home/patel7hb/assignments/assignment1/test/2 /home/patel7hb/assignments/assignment1/test/5
+a125f -dmove /home/patel7hb/assignments/assignment1/test/3 /home/patel7hb/assignments/assignment1/test/6
+a125f -remd /home/patel7hb/assignments/assignment1/test .txt
+a125f -remd /home/patel7hb/assignments/assignment1/test .docx
